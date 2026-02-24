@@ -35,7 +35,7 @@ function App() {
 
   const otherLocations = useMemo(
     () => locations.filter((loc) => loc.id !== selfId),
-    [locations, selfId]
+    [locations, selfId],
   );
 
   return (

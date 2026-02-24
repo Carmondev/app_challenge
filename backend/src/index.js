@@ -14,7 +14,7 @@ app.use(
     // Abrir CORS para simplificar deploy; ajuste CLIENT_ORIGIN se quiser restringir.
     origin: "*",
     credentials: false,
-  })
+  }),
 );
 
 app.get("/", (_req, res) => {
@@ -65,6 +65,42 @@ io.on("connection", (socket) => {
   broadcastLocations();
 });
 
+const webpush = require("web-push");
+
+// Configurar VAPID keys
+webpush.setVapidDetails(
+  "mailto:seu-email@exemplo.com",
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY,
+);
+
+// Armazenar subscriptions
+const subscriptions = new Map();
+
+app.post("/api/subscribe", (req, res) => {
+  const { userId, subscription } = req.body;
+  subscriptions.set(userId, subscription);
+  res.status(201).json({});
+});
+
+// Enviar notificação quando usuário se aproxima
+function notifyNearbyUsers(userId, location, radius = 100) {
+  const nearbyUsers = findUsersWithinRadius(userId, location, radius);
+
+  nearbyUsers.forEach((nearbyUser) => {
+    const subscription = subscriptions.get(nearbyUser.id);
+    if (subscription) {
+      webpush.sendNotification(
+        subscription,
+        JSON.stringify({
+          title: "👋 Usuário próximo!",
+          body: `${nearbyUser.name} está a menos de 100m de você`,
+          icon: "/icon.png",
+        }),
+      );
+    }
+  });
+}
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
